@@ -15,9 +15,9 @@ import { Code, Layout, ShieldCheck, Clock, CheckCircle } from "lucide-react";
 // Register components for the runtime
 registerAllComponents();
 
-const DEFAULT_CONFIG_STR = JSON.stringify({
+const HEALTHY_CONFIG_STR = JSON.stringify({
   schemaVersion: "1.0",
-  title: "CRM Dashboard",
+  title: "CRM Dashboard (Healthy Demo)",
   pages: [
     {
       id: "main-dashboard",
@@ -28,7 +28,36 @@ const DEFAULT_CONFIG_STR = JSON.stringify({
           type: "Card",
           props: { title: "Welcome back, Admin" },
           children: [
-            { type: "Text", props: { content: "Here's your summary for today." } }
+            { id: "welcome-text", type: "Text", props: { content: "Here's your summary for today." } }
+          ]
+        },
+        {
+          id: "quick-actions-card",
+          type: "Card",
+          props: { title: "Quick Actions" },
+          children: [
+            { id: "action-form", type: "Form", props: { submitLabel: "Create User", fields: [{id: "email", label: "Email Address"}] } }
+          ]
+        }
+      ]
+    }
+  ]
+}, null, 2);
+
+const BROKEN_CONFIG_STR = JSON.stringify({
+  schemaVersion: "1.0",
+  title: "CRM Dashboard (Broken Demo)",
+  pages: [
+    {
+      id: "main-dashboard",
+      type: "Dashboard",
+      children: [
+        {
+          id: "welcome-card",
+          type: "Card",
+          props: { title: "Welcome back, Admin" },
+          children: [
+            { id: "welcome-card", type: "Text", props: { content: "This shares the ID welcome-card." } }
           ]
         },
         {
@@ -45,7 +74,8 @@ const DEFAULT_CONFIG_STR = JSON.stringify({
 }, null, 2);
 
 export function WorkspaceApp() {
-  const [jsonConfig, setJsonConfig] = useState(DEFAULT_CONFIG_STR);
+  const [jsonConfig, setJsonConfig] = useState(HEALTHY_CONFIG_STR);
+  const [demoMode, setDemoMode] = useState<"healthy" | "broken" | "custom">("healthy");
   const [compileResult, setCompileResult] = useState<any>(null);
   const [compileTimeMs, setCompileTimeMs] = useState(0);
   const [isCompiling, setIsCompiling] = useState(false);
@@ -53,11 +83,11 @@ export function WorkspaceApp() {
   // Right panel tabs
   const [rightTab, setRightTab] = useState<"validation" | "diff">("validation");
 
-  const handleCompile = () => {
+  const handleCompile = (configToCompile = jsonConfig) => {
     setIsCompiling(true);
     const start = performance.now();
     try {
-      const parsed = JSON.parse(jsonConfig);
+      const parsed = JSON.parse(configToCompile);
       const result = compileConfig(parsed);
       const end = performance.now();
       setCompileResult(result);
@@ -68,6 +98,13 @@ export function WorkspaceApp() {
     } finally {
       setTimeout(() => setIsCompiling(false), 300); // UI delay for feel
     }
+  };
+
+  const handleLoadDemo = (mode: "healthy" | "broken") => {
+    setDemoMode(mode);
+    const config = mode === "healthy" ? HEALTHY_CONFIG_STR : BROKEN_CONFIG_STR;
+    setJsonConfig(config);
+    handleCompile(config);
   };
 
   useEffect(() => {
@@ -91,10 +128,10 @@ export function WorkspaceApp() {
   }, [jsonConfig]);
 
   return (
-    <div className="flex flex-col h-screen bg-[#0A0A0A] text-white overflow-hidden">
+    <div className="flex flex-col min-h-screen bg-[#0A0A0A] text-white lg:h-screen lg:overflow-hidden">
       <Navigation />
       
-      <main className="flex-1 flex flex-col pt-20 px-6 pb-6 w-full h-full">
+      <main className="flex-1 flex flex-col pt-20 px-6 pb-6 w-full lg:h-full overflow-y-auto lg:overflow-hidden">
         {/* Header Dashboard */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
@@ -115,35 +152,51 @@ export function WorkspaceApp() {
         </motion.div>
 
         {/* 3-Column Layout */}
-        <div className="flex-1 flex gap-4 h-[calc(100vh-220px)]">
+        <div className="flex-1 flex flex-col lg:flex-row gap-4 lg:h-[calc(100vh-220px)] lg:min-h-0">
           
           {/* LEFT: JSON Editor */}
           <motion.div 
-            className="flex-1 flex flex-col bg-[#111111] border border-white/5 rounded-xl overflow-hidden shadow-xl"
+            className="flex-1 flex flex-col bg-[#111111] border border-white/5 rounded-xl overflow-hidden shadow-xl min-h-[350px] lg:min-h-0"
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <div className="bg-[#151515] px-4 py-2 flex items-center justify-between border-b border-white/5">
+            <div className="bg-[#151515] px-4 py-2 flex items-center justify-between border-b border-white/5 gap-2">
               <span className="text-xs font-mono text-text-tertiary flex items-center gap-2"><Code size={14}/> configuration.json</span>
-              <span className="text-[10px] text-text-tertiary">Ctrl+Enter to compile</span>
+              <div className="flex gap-1.5 items-center">
+                <button 
+                  onClick={() => handleLoadDemo("healthy")}
+                  className={`text-[9px] px-2 py-0.5 rounded font-mono transition-colors font-bold uppercase ${demoMode === "healthy" ? "bg-status-success text-black" : "bg-white/5 text-text-secondary hover:bg-white/10"}`}
+                >
+                  Healthy Demo
+                </button>
+                <button 
+                  onClick={() => handleLoadDemo("broken")}
+                  className={`text-[9px] px-2 py-0.5 rounded font-mono transition-colors font-bold uppercase ${demoMode === "broken" ? "bg-status-error text-white animate-pulse" : "bg-white/5 text-text-secondary hover:bg-white/10"}`}
+                >
+                  Broken Demo
+                </button>
+              </div>
             </div>
             <textarea
               value={jsonConfig}
-              onChange={(e) => setJsonConfig(e.target.value)}
+              onChange={(e) => {
+                setJsonConfig(e.target.value);
+                setDemoMode("custom");
+              }}
               spellCheck={false}
-              className="flex-1 bg-transparent text-text-secondary font-mono text-xs p-4 focus:outline-none focus:ring-1 focus:ring-accent-primary/50 resize-none custom-scrollbar"
+              className="flex-1 bg-transparent text-text-secondary font-mono text-xs p-4 focus:outline-none focus:ring-1 focus:ring-accent-primary/50 resize-none min-h-[280px] lg:min-h-0 custom-scrollbar"
             />
           </motion.div>
 
           {/* CENTER: Runtime Preview & Timeline */}
           <motion.div 
-            className="flex-[1.5] flex flex-col gap-4"
+            className="flex-[1.5] flex flex-col gap-4 min-h-[550px] lg:min-h-0"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <div className="flex-[2] flex flex-col bg-[#111111] border border-white/5 rounded-xl overflow-hidden shadow-xl">
+            <div className="flex-[2] flex flex-col bg-[#111111] border border-white/5 rounded-xl overflow-hidden shadow-xl min-h-[350px] lg:min-h-0">
               <div className="bg-[#151515] px-4 py-2 flex items-center justify-between border-b border-white/5">
                 <span className="text-xs font-mono text-text-tertiary flex items-center gap-2"><Layout size={14}/> Runtime Preview</span>
                 {isCompiling && <span className="w-2 h-2 rounded-full bg-accent-primary animate-pulse" />}
@@ -165,12 +218,12 @@ export function WorkspaceApp() {
               </div>
             </div>
 
-            <div className="flex-1 flex flex-col bg-[#111111] border border-white/5 rounded-xl overflow-hidden shadow-xl">
+            <div className="flex-1 flex flex-col bg-[#111111] border border-white/5 rounded-xl overflow-hidden shadow-xl min-h-[180px] lg:min-h-0">
               <div className="bg-[#151515] px-4 py-2 flex items-center gap-2 border-b border-white/5">
                 <Clock size={14} className="text-text-tertiary"/>
                 <span className="text-xs font-mono text-text-tertiary">Event Timeline</span>
               </div>
-              <div className="flex-1 p-4 overflow-auto">
+              <div className="flex-1 p-4 overflow-auto custom-scrollbar">
                 {compileResult && <EventTimeline compileResult={compileResult} compileTimeMs={compileTimeMs} />}
               </div>
             </div>
@@ -178,7 +231,7 @@ export function WorkspaceApp() {
 
           {/* RIGHT: Validation & Diff */}
           <motion.div 
-            className="flex-1 flex flex-col bg-[#111111] border border-white/5 rounded-xl overflow-hidden shadow-xl"
+            className="flex-1 flex flex-col bg-[#111111] border border-white/5 rounded-xl overflow-hidden shadow-xl min-h-[350px] lg:min-h-0"
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.3 }}
@@ -208,7 +261,7 @@ export function WorkspaceApp() {
               </button>
             </div>
             
-            <div className="flex-1 p-4 overflow-hidden relative">
+            <div className="flex-1 p-4 overflow-y-auto custom-scrollbar relative">
               {compileResult && rightTab === "validation" && <ValidationPanel diagnostics={compileResult.diagnostics} />}
               {compileResult && rightTab === "diff" && <DiffViewer fixes={compileResult.normalizations} />}
             </div>
