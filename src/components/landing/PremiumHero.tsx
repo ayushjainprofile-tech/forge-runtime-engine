@@ -56,7 +56,7 @@ export function PremiumHero({ onStartBuilding, isCompiling, onCompilationComplet
 
   return (
     <motion.div 
-      className="relative min-h-screen w-full bg-[#07090B] overflow-hidden flex flex-col items-center justify-center"
+      className="relative min-h-screen w-full bg-[#07090B] overflow-y-auto flex flex-col items-center justify-center"
       initial={{ opacity: 1 }}
       exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
       transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
